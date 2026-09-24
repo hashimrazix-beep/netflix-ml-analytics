@@ -134,10 +134,10 @@ div[data-testid="stButtonGroup"] button p { font-size: 0.92rem !important; color
 .card {
   position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
   padding: 1.1rem 1.2rem; margin-bottom: 1rem;
-  animation: rise 0.7s var(--ease) both;
+  animation: rise 0.7s var(--ease) backwards;
   transition: transform 0.35s var(--ease), border-color 0.35s var(--ease), box-shadow 0.35s var(--ease);
 }
-.card:hover { transform: translateY(-4px); border-color: var(--line-strong); box-shadow: 0 18px 40px -18px rgba(212, 196, 168, 0.3); }
+.card:hover { border-color: var(--line-strong); box-shadow: 0 18px 40px -18px rgba(212, 196, 168, 0.3); }
 .card .title { font-weight: 600; font-size: 1.02rem; color: var(--text); line-height: 1.3; margin: 0.55rem 0 0.2rem; }
 .card .meta { color: var(--faint); font-size: 0.8rem; }
 .card .genres { color: var(--muted); font-size: 0.8rem; margin-top: 0.55rem; line-height: 1.45; }
@@ -167,7 +167,7 @@ details[open].card.rec { border-color: var(--line-strong); }
 .focus .title { margin: 0; font-size: 1.15rem; }
 
 /* ---------- Prediction ---------- */
-.result { text-align: center; padding: 1.8rem 1.2rem; animation: pop 0.55s var(--ease) both; }
+.result { text-align: center; padding: 1.8rem 1.2rem; animation: pop 0.55s var(--ease) backwards; }
 .result .big {
   font-size: 2.6rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin: 0.35rem 0;
   background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -201,14 +201,84 @@ div[data-testid="stSlider"] div[role="slider"] { box-shadow: 0 0 0 4px rgba(212,
 div[data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 label, .stRadio label p, div[data-testid="stWidgetLabel"] p { color: var(--muted) !important; font-weight: 500 !important; }
 
+/* ---------- 1. Loaders ---------- */
+div[data-testid="stElementContainer"]:has(#intro-loader) { animation: none !important; transform: none !important; height: 0; margin: 0; }
+#intro-loader {
+  position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
+  background: var(--bg); pointer-events: none;
+  animation: loader-out 0.7s var(--ease) 1.1s forwards;
+}
+@keyframes loader-out { to { opacity: 0; visibility: hidden; } }
+.loader-ring {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 25%, var(--sage) 50%, var(--sand) 75%, var(--cream));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  animation: spin 0.9s linear infinite;
+}
+.loader-text { color: var(--sand); font-size: 0.8rem; letter-spacing: 0.25em; text-transform: uppercase; animation: breathe 1.6s ease-in-out infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes breathe { 50% { opacity: 0.45; } }
+div[data-testid="stSpinner"] > div { color: var(--sand) !important; }
+div[data-testid="stSpinner"] i, div[data-testid="stSpinner"] svg { border-color: var(--sage) transparent transparent transparent !important; color: var(--sage) !important; }
+
+/* ---------- 2. 3D tilt + glare ---------- */
+.card {
+  --rx: 0deg; --ry: 0deg; --lift: 0px; --mx: 50%; --my: 50%;
+  transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(var(--lift));
+  transform-style: preserve-3d; will-change: transform;
+}
+.card:hover { --lift: -4px; transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(var(--lift)); }
+.card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle at var(--mx) var(--my), rgba(244, 241, 222, 0.10), transparent 55%);
+  transition: opacity 0.35s var(--ease);
+}
+.card:hover::after { opacity: 1; }
+.card .title, .card .score { transform: translateZ(18px); }
+
+/* ---------- 3. Scroll reveal ---------- */
+.reveal { opacity: 0; translate: 0 18px; transition: opacity 0.7s var(--ease), translate 0.7s var(--ease); }
+.reveal.revealed { opacity: 1; translate: 0 0; }
+
+/* ---------- 4. Micro-interactions ---------- */
+.has-ripple { position: relative; overflow: hidden; }
+.ripple {
+  position: absolute; border-radius: 50%; pointer-events: none; transform: scale(0);
+  background: rgba(244, 241, 222, 0.28); animation: ripple 0.6s var(--ease) forwards;
+}
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+.stButton > button:active, div[data-testid="stFormSubmitButton"] > button:active,
+div[data-testid="stButtonGroup"] button:active { transform: scale(0.96) !important; }
+.pill { transition: background 0.25s var(--ease), color 0.25s var(--ease), border-color 0.25s var(--ease); }
+.card:hover .pill { border-color: var(--line-strong); }
+.pill:hover { background: rgba(119, 141, 122, 0.3); color: var(--cream); }
+.score { transition: transform 0.3s var(--ease); display: inline-block; }
+.card:hover .score { transform: translateZ(18px) scale(1.12); }
+.more { transition: color 0.25s var(--ease); }
+.card:hover .more { color: var(--sand); }
+.strip div { transition: transform 0.3s var(--ease); }
+.strip div:hover { transform: translateY(-3px); }
+.strip div:hover b { color: var(--sand); }
+
+/* ---------- 5. Parallax ---------- */
+.hero { will-change: transform, opacity; }
+#beams-bg { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+
 @media (prefers-reduced-motion: reduce) {
+  #intro-loader { display: none !important; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 </style>
 """
 st.markdown(THEME_CSS, unsafe_allow_html=True)
+st.markdown(
+    '<div id="intro-loader"><div class="loader-ring"></div><div class="loader-text">Movie ML Analytics</div></div>',
+    unsafe_allow_html=True,
+)
 # Animated beams background (runs once, attaches a canvas to the page)
-components.html(f"<script>{(PROJECT_ROOT / 'static' / 'beams.js').read_text()}</script>", height=0)
+_scripts = "".join((PROJECT_ROOT / "static" / f).read_text() for f in ("beams.js", "interactions.js"))
+components.html(f"<script>{_scripts}</script>", height=0)
 
 
 def render(markup: str) -> None:
