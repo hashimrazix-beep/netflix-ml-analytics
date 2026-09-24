@@ -155,11 +155,19 @@ div[data-testid="stButtonGroup"] button p { font-size: 0.92rem !important; color
 .rec-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
 @media (max-width: 900px) { .rec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .rec-grid { grid-template-columns: 1fr; } }
-.card.rec { margin: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+.card.rec { margin: 0; }
 .rec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; }
 .card.rec .title { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .tags { display: flex; gap: 0.4rem; flex-wrap: nowrap; overflow: hidden; margin-top: 0.2rem; }
 .tags .pill { white-space: nowrap; color: var(--sand); }
+.rec-grid { align-items: start; }
+.card.rec summary { list-style: none; cursor: pointer; display: flex; flex-direction: column; gap: 0.45rem; outline: none; }
+.card.rec summary::-webkit-details-marker { display: none; }
+.more { margin-left: auto; font-size: 0.72rem; color: var(--faint); white-space: nowrap; align-self: center; }
+.more::after { content: " ▾"; display: inline-block; transition: transform 0.3s var(--ease); }
+details[open] .more::after { transform: rotate(180deg); }
+details[open].card.rec { border-color: var(--line-strong); }
+.synopsis { margin: 0.8rem 0 0; padding-top: 0.8rem; border-top: 1px solid var(--line); color: var(--sand); font-size: 0.86rem; line-height: 1.55; animation: rise 0.45s var(--ease) both; }
 .pill { font-size: 0.7rem; font-weight: 600; padding: 0.18rem 0.6rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
 .score { font-size: 0.8rem; font-weight: 700; color: var(--sand); }
 .bar { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.06); margin-top: 0.85rem; overflow: hidden; }
@@ -270,6 +278,56 @@ def get_clusterer(df: pd.DataFrame, k: int) -> MovieClusterer:
     return build_clusterer(df, n_clusters=k)
 
 
+RATING_NOTES = {
+    "TV-MA": "Mature audiences only",
+    "R": "Restricted: under 17 needs an adult",
+    "TV-14": "Parents strongly cautioned (14+)",
+    "PG-13": "Parents strongly cautioned (13+)",
+    "TV-PG": "Parental guidance suggested",
+    "PG": "Parental guidance suggested",
+    "TV-Y7": "Suitable for children 7+",
+    "TV-Y": "Suitable for all children",
+    "TV-G": "General audience",
+}
+
+
+def _join(items: list[str]) -> str:
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def summarize(row, query) -> str:
+    """Write a short summary of a title from its catalog metadata."""
+    is_movie = row["type"] == "Movie"
+    genres = [g.lower() for g in neutralize_genres(row["listed_in"]).split(", ") if g != "Other"]
+    countries = [c.strip() for c in str(row["country"]).split(",") if c.strip() not in ("", "Unknown Country")]
+    countries = [f"the {c}" if c.split()[0] in ("United", "Czech", "Dominican") else c for c in countries]
+    directors = [d.strip() for d in str(row["director"]).split(",") if d.strip() != "Unknown Director"]
+
+    what = f"{_join(genres[:3])} {'film' if is_movie else 'series'}" if genres else ("film" if is_movie else "series")
+    text = f"A {row['release_year']} {what}"
+    if countries:
+        text += f" from {_join(countries[:2])}"
+    if directors:
+        text += f", {'directed' if is_movie else 'created'} by {_join(directors[:2])}"
+    text += ". "
+
+    length = f"Runs {row['duration']}" if is_movie else f"Spans {row['duration'].lower()}"
+    note = RATING_NOTES.get(row["rating"])
+    text += f"{length}, rated {row['rating']}" + (f" ({note.lower()})" if note else "") + "."
+    added = pd.to_datetime(row.get("date_added"), errors="coerce")
+    if pd.notna(added):
+        text += f" Added to the catalog in {added:%B %Y}."
+
+    shared = [g for g in neutralize_genres(row["listed_in"]).split(", ") if g in neutralize_genres(query["listed_in"]).split(", ")]
+    shared += [d for d in directors if d in str(query["director"])]
+    shared += [c for c in countries if c.removeprefix("the ") in str(query["country"])]
+    if row["rating"] == query["rating"]:
+        shared.append(row["rating"])
+    if shared:
+        text += f" Suggested because it shares {_join(shared[:4])} with {query['title']}."
+    return text
+
+
 def unique_genres(series: pd.Series) -> list[str]:
     return sorted({g.strip() for s in series.dropna() for g in s.split(",") if g.strip()})
 
@@ -345,14 +403,17 @@ if page == "Discover":
         genres = neutralize_genres(row["listed_in"]).split(", ")[:2]
         tags = "".join(f'<span class="pill">{esc(g)}</span>' for g in genres)
         cards.append(f"""
-        <div class="card rec" style="animation-delay:{i * 0.06:.2f}s">
-          <div class="rec-head">
-            <div class="title" title="{esc(row['title'])}">{esc(row['title'])}</div>
-            <span class="score">{float(row['similarity_score']) * 100:.0f}%</span>
-          </div>
-          <div class="meta">{esc(row['type'])} · {esc(row['release_year'])} · {esc(row['duration'])} · {esc(row['rating'])}</div>
-          <div class="tags">{tags}</div>
-        </div>
+        <details class="card rec" style="animation-delay:{i * 0.06:.2f}s">
+          <summary>
+            <div class="rec-head">
+              <div class="title" title="{esc(row['title'])}">{esc(row['title'])}</div>
+              <span class="score">{float(row['similarity_score']) * 100:.0f}%</span>
+            </div>
+            <div class="meta">{esc(row['type'])} · {esc(row['release_year'])} · {esc(row['duration'])} · {esc(row['rating'])}</div>
+            <div class="tags">{tags}<span class="more">Summary</span></div>
+          </summary>
+          <p class="synopsis">{esc(summarize(row, current))}</p>
+        </details>
         """)
     render('<div class="rec-grid">' + "".join(cards) + "</div>")
 
@@ -407,18 +468,6 @@ elif page == "Rating":
 
     with st.spinner("Training the rating model..."):
         rating_clf = get_rating_model()
-
-    RATING_NOTES = {
-        "TV-MA": "Mature audiences only",
-        "R": "Restricted: under 17 needs an adult",
-        "TV-14": "Parents strongly cautioned (14+)",
-        "PG-13": "Parents strongly cautioned (13+)",
-        "TV-PG": "Parental guidance suggested",
-        "PG": "Parental guidance suggested",
-        "TV-Y7": "Suitable for children 7+",
-        "TV-Y": "Suitable for all children",
-        "TV-G": "General audience",
-    }
 
     left, right = st.columns(2, gap="large")
     with left:

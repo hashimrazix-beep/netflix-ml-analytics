@@ -147,6 +147,7 @@ class MovieRecommender:
             "rating",
             "duration",
             "release_year",
+            "date_added",
             "similarity_score",
         ]
         available_cols = [c for c in columns_to_return if c in results.columns]
