@@ -52,3 +52,6 @@ desktop.ini
 
 # Project specific ignores
 MACHINE LEARNING TASK LIST.pdf
+
+# Feedback submitted through the app
+feedback/

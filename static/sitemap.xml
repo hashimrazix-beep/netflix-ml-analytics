@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://movie-ml-analytics.streamlit.app/</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://movie-ml-analytics.streamlit.app/?page=format</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://movie-ml-analytics.streamlit.app/?page=rating</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://movie-ml-analytics.streamlit.app/?page=segments</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://movie-ml-analytics.streamlit.app/?page=faq</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://movie-ml-analytics.streamlit.app/?page=privacy</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://movie-ml-analytics.streamlit.app/?page=terms</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+</urlset>

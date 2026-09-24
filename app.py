@@ -6,6 +6,7 @@ Recommendations, format & rating prediction, and catalog segmentation.
 from __future__ import annotations
 
 import html
+import json
 import sys
 from pathlib import Path
 
@@ -27,14 +28,26 @@ from src.classifier import (
     train_rating_classifier,
 )
 from src.clustering import MovieClusterer, build_clusterer
+from src import site
 
+
+# ==============================================================================
+# Routing: ?page=<slug>; missing -> home, unknown -> custom 404
+# ==============================================================================
+
+PAGE = site.resolve_page(st.query_params.get("page"))
+page = PAGE.label
 
 st.set_page_config(
-    page_title="Movie ML Analytics",
-    page_icon="🎞️",
+    page_title=site.page_title(PAGE),
+    page_icon=str(PROJECT_ROOT / "static" / "favicon-32.png"),
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+APP_URL = site.get_setting("APP_URL", st.secrets, site.DEFAULT_APP_URL).rstrip("/")
+GA_ID = site.valid_ga_id(site.get_setting("GA_MEASUREMENT_ID", st.secrets))
+STATIC_URL = "app/static/"
 
 
 # ==============================================================================
@@ -202,7 +215,8 @@ div[data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 1
 label, .stRadio label p, div[data-testid="stWidgetLabel"] p { color: var(--muted) !important; font-weight: 500 !important; }
 
 /* ---------- 1. Loaders ---------- */
-div[data-testid="stElementContainer"]:has(#intro-loader) { animation: none !important; transform: none !important; height: 0; margin: 0; }
+div[data-testid="stElementContainer"]:has(#intro-loader),
+div[data-testid="stElementContainer"]:has(.mobile-cta) { animation: none !important; transform: none !important; height: 0; margin: 0; }
 #intro-loader {
   position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.1rem;
   background: var(--bg); pointer-events: none;
@@ -265,7 +279,98 @@ div[data-testid="stButtonGroup"] button:active { transform: scale(0.96) !importa
 .hero { will-change: transform, opacity; }
 #beams-bg { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
 
+/* ---------- CTA, breadcrumbs, footer ---------- */
+.cta-row { display: flex; gap: 0.7rem; justify-content: center; flex-wrap: wrap; margin-top: 1.2rem; }
+a.cta {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.6rem 1.3rem;
+  border-radius: 999px; font-weight: 600; font-size: 0.95rem; text-decoration: none !important;
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), background-position 0.6s var(--ease), border-color 0.25s var(--ease);
+}
+a.cta.primary { background: var(--grad); background-size: 200% auto; color: var(--navy) !important; box-shadow: 0 8px 26px -12px rgba(212, 196, 168, 0.6); }
+a.cta.primary:hover { transform: translateY(-2px); background-position: right center; }
+a.cta.ghost { color: var(--sand) !important; border: 1px solid var(--line-strong); }
+a.cta.ghost:hover { border-color: var(--sand); transform: translateY(-2px); }
+a.cta:active { transform: scale(0.97); }
+a.cta:focus-visible, .site-footer a:focus-visible, .breadcrumbs a:focus-visible, summary:focus-visible { outline: 2px solid var(--sand); outline-offset: 3px; }
+.hero.compact { margin-bottom: 1rem; }
+.hero.compact a.wordmark { display: inline-block; font-size: clamp(1.6rem, 4vw, 2.2rem); text-decoration: none; color: transparent !important; }
+.breadcrumbs { display: flex; gap: 0.5rem; align-items: center; font-size: 0.8rem; color: var(--faint); margin: 1.2rem 0 -0.8rem; }
+.breadcrumbs a { color: var(--sand) !important; text-decoration: none; }
+.breadcrumbs a:hover { text-decoration: underline; }
+.breadcrumbs .sep { opacity: 0.5; }
+.site-footer { margin-top: 3.5rem; padding: 1.6rem 0 1rem; border-top: 1px solid var(--line); text-align: center; }
+.site-footer nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 1.3rem; }
+.site-footer a { color: var(--muted) !important; font-size: 0.85rem; text-decoration: none; }
+.site-footer a:hover { color: var(--cream) !important; }
+.site-footer p { color: var(--faint); font-size: 0.76rem; margin: 0.9rem 0 0; }
+.inline-links { color: var(--muted); font-size: 0.9rem; margin-top: 1rem; }
+.inline-links a, .prose a { color: var(--sand) !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+/* ---------- FAQ, legal, status pages ---------- */
+.faq { display: grid; gap: 0.8rem; }
+.faq-item { margin: 0; }
+.faq-item summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 1rem; font-weight: 600; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item .more { margin-left: 0; }
+.prose { max-width: 760px; }
+.prose h3 { color: var(--cream); font-size: 1.05rem; font-weight: 600; margin: 1.6rem 0 0.4rem; padding: 0; }
+.prose p { color: var(--sand); line-height: 1.7; font-size: 0.95rem; margin: 0; }
+.status-page { max-width: 620px; margin: 2rem auto; padding: 2.6rem 1.5rem; }
+
+/* ---------- Cookie banner ---------- */
+#cookie-banner {
+  position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 1000; width: min(640px, calc(100% - 2rem));
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: space-between;
+  background: var(--surface-solid); border: 1px solid var(--line-strong); border-radius: 16px; padding: 0.9rem 1.1rem;
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.8); animation: rise 0.5s var(--ease) both; transition: opacity 0.35s, transform 0.35s;
+}
+#cookie-banner.hide { opacity: 0; transform: translate(-50%, 12px); }
+#cookie-banner p { margin: 0; color: var(--sand); font-size: 0.86rem; flex: 1 1 260px; }
+#cookie-banner a { color: var(--cream); }
+.cookie-actions { display: flex; gap: 0.5rem; }
+#cookie-banner button {
+  min-height: 40px; padding: 0.45rem 1rem; border-radius: 999px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--line-strong); background: transparent; color: var(--sand); transition: transform 0.2s var(--ease);
+}
+#cookie-banner button.primary { background: var(--sand); color: var(--navy); border-color: var(--sand); }
+#cookie-banner button:active { transform: scale(0.96); }
+
+/* ---------- Sticky mobile CTA ---------- */
+.mobile-cta { display: none; }
+
+/* ---------- Breakpoints ---------- */
+@media (max-width: 900px) {
+  .block-container { padding-left: 1.2rem !important; padding-right: 1.2rem !important; }
+  .strip { gap: 1.4rem; }
+}
+@media (max-width: 640px) {
+  .block-container { padding-top: 1.4rem !important; padding-bottom: 5.5rem !important; }
+  .tagline { font-size: 0.95rem; }
+  .stats { gap: 0.9rem; }
+  .section h2 { font-size: 1.3rem; }
+  .result .big { font-size: 2.1rem; }
+  .focus { flex-direction: column; align-items: flex-start; }
+  div[data-testid="stButtonGroup"] button { padding: 0.45rem 0.6rem !important; }
+  .mobile-cta {
+    display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 900; padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--navy) 60%, rgba(13, 27, 42, 0)); animation: rise 0.5s var(--ease) both;
+  }
+  .mobile-cta a.cta { width: 100%; }
+  #cookie-banner { bottom: 5rem; }
+}
+@media (max-width: 380px) {
+  div[data-testid="stButtonGroup"] button p { font-size: 0.8rem !important; }
+}
+
+/* ---------- Cross-browser fallbacks ---------- */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+* { -webkit-tap-highlight-color: transparent; }
+@supports not (translate: 0 0) { .reveal { opacity: 1; } }
+@supports not (background-clip: text) { @supports not (-webkit-background-clip: text) { .wordmark, .result .big { color: var(--sand); background: none; } } }
+
 @media (prefers-reduced-motion: reduce) {
+  #cookie-banner, .mobile-cta { animation: none !important; }
   #intro-loader { display: none !important; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -273,12 +378,43 @@ div[data-testid="stButtonGroup"] button:active { transform: scale(0.96) !importa
 """
 st.markdown(THEME_CSS, unsafe_allow_html=True)
 st.markdown(
-    '<div id="intro-loader"><div class="loader-ring"></div><div class="loader-text">Movie ML Analytics</div></div>',
+    '<div id="intro-loader" role="status" aria-label="Loading"><div class="loader-ring" aria-hidden="true"></div><div class="loader-text">Movie ML Analytics</div></div>',
     unsafe_allow_html=True,
 )
 # Animated beams background (runs once, attaches a canvas to the page)
-_scripts = "".join((PROJECT_ROOT / "static" / f).read_text() for f in ("beams.js", "interactions.js"))
-components.html(f"<script>{_scripts}</script>", height=0)
+def _json_ld() -> list[dict]:
+    crumbs = [{"@type": "ListItem", "position": 1, "name": "Home", "item": APP_URL + "/"}]
+    if PAGE.slug != site.HOME:
+        crumbs.append({"@type": "ListItem", "position": 2, "name": PAGE.title, "item": site.page_url(APP_URL, PAGE)})
+    data = [
+        {"@context": "https://schema.org", "@type": "WebApplication", "name": site.SITE_NAME, "url": APP_URL + "/",
+         "applicationCategory": "EntertainmentApplication", "operatingSystem": "Any",
+         "description": site.PAGES[site.HOME].description, "offers": {"@type": "Offer", "price": "0"}},
+        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": crumbs},
+    ]
+    if PAGE.slug == "faq":
+        data.append({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+            {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in site.FAQ]})
+    return data
+
+
+_page_config = {
+    "slug": PAGE.slug,
+    "title": site.page_title(PAGE),
+    "description": PAGE.description,
+    "indexable": PAGE.indexable,
+    "url": site.page_url(APP_URL, PAGE),
+    "siteName": site.SITE_NAME,
+    "static": f"{APP_URL}/{STATIC_URL}",
+    "ogImage": f"{APP_URL}/{STATIC_URL}og-image.jpg",
+    "ogImageAlt": "Movie ML Analytics: recommendations, predictions, and a map of 8,790 films and series.",
+    "gaId": GA_ID,
+    "jsonLd": _json_ld(),
+}
+# Escape "</" so page data can never close the script tag early
+_config_js = "window.__PAGE__ = " + json.dumps(_page_config).replace("</", "<\\/") + ";"
+_scripts = "".join((PROJECT_ROOT / "static" / f).read_text() for f in ("beams.js", "interactions.js", "site.js"))
+components.html(f"<script>{_config_js}{_scripts}</script>", height=0)
 
 
 def render(markup: str) -> None:
@@ -291,8 +427,27 @@ def esc(value) -> str:
     return html.escape(str(value))
 
 
-def section(title: str, subtitle: str) -> None:
-    render(f'<div class="section"><h2>{esc(title)}</h2><p>{esc(subtitle)}</p></div>')
+def section(title: str, subtitle: str, anchor: str = "") -> None:
+    anchor_attr = f' id="{anchor}"' if anchor else ""
+    render(f'<div class="section"{anchor_attr}><h2>{esc(title)}</h2><p>{esc(subtitle)}</p></div>')
+
+
+def link(slug: str, text: str, cls: str = "") -> str:
+    href = "./" if slug == site.HOME else f"?page={slug}"
+    cls_attr = f' class="{cls}"' if cls else ""
+    return f'<a href="{href}" target="_self"{cls_attr}>{esc(text)}</a>'
+
+
+def rate_limited(action: str, limit: int, window: float = 60) -> bool:
+    """True (and a notice is shown) when this session exceeds `limit` actions per `window` seconds."""
+    if site.allow(st.session_state, action, limit, window):
+        return False
+    st.warning("You're going a little fast. Please wait a moment and try again.", icon="⏳")
+    return True
+
+
+def prose(sections: list[tuple[str, str]]) -> None:
+    render('<div class="prose">' + "".join(f"<h3>{esc(h)}</h3><p>{esc(t)}</p>" for h, t in sections) + "</div>")
 
 
 def prob_bars(probabilities: dict, limit: int = 5) -> str:
@@ -403,24 +558,53 @@ show_count = int((df["type"] == "TV Show").sum())
 # Hero & navigation
 # ==============================================================================
 
-render(f"""
-<div class="hero">
-  <div class="wordmark">Movie ML Analytics</div>
-  <div class="tagline">Discover, predict, and map a catalog of films and series with machine learning.</div>
-  <div class="stats">
-    <span><span class="live"></span><b>{len(df):,}</b> titles</span>
-    <span><b>{movie_count:,}</b> movies</span>
-    <span><b>{show_count:,}</b> series</span>
-  </div>
-</div>
-""")
+# Global per-session request limit (every interaction is a rerun)
+if rate_limited("rerun", 120):
+    st.stop()
 
-PAGES = ["Discover", "Format", "Rating", "Segments"]
+if PAGE.tool:
+    render(f"""
+    <div class="hero">
+      <div class="wordmark">Movie ML Analytics</div>
+      <div class="tagline">Discover, predict, and map a catalog of films and series with machine learning.</div>
+      <div class="cta-row">
+        {link("discover", "Find your next watch", "cta primary") if PAGE.slug != "discover" else '<a href="#find" class="cta primary">Find your next watch</a>'}
+        {link("faq", "How it works", "cta ghost")}
+      </div>
+      <div class="stats">
+        <span><span class="live"></span><b>{len(df):,}</b> titles</span>
+        <span><b>{movie_count:,}</b> movies</span>
+        <span><b>{show_count:,}</b> series</span>
+      </div>
+    </div>
+    """)
+else:
+    render(f'<div class="hero compact">{link("discover", "Movie ML Analytics", "wordmark")}</div>')
+
+TOOL_PAGES = [p for p in site.PAGES.values() if p.tool]
+LABEL_TO_SLUG = {p.label: p.slug for p in TOOL_PAGES}
+
+
+def _go_to_nav_page() -> None:
+    label = st.session_state.get("nav")
+    if label:
+        st.query_params["page"] = LABEL_TO_SLUG[label]
+
+
 _, nav_col, _ = st.columns([1, 6, 1])
 with nav_col:
-    page = st.segmented_control(
-        "Navigation", PAGES, default=PAGES[0], key="page", label_visibility="collapsed", width="stretch",
-    ) or PAGES[0]
+    st.segmented_control(
+        "Navigation", [p.label for p in TOOL_PAGES], default=page if PAGE.tool else None,
+        key="nav", on_change=_go_to_nav_page, label_visibility="collapsed", width="stretch",
+    )
+
+# Breadcrumbs
+crumbs = [link("discover", "Home")]
+if PAGE.slug != site.HOME:
+    crumbs.append(f'<span aria-current="page">{esc(PAGE.title)}</span>')
+else:
+    crumbs.append('<span aria-current="page">Recommendations</span>')
+render('<nav class="breadcrumbs" aria-label="Breadcrumb">' + '<span class="sep">/</span>'.join(crumbs) + "</nav>")
 
 
 # ==============================================================================
@@ -428,7 +612,7 @@ with nav_col:
 # ==============================================================================
 
 if page == "Discover":
-    section("Find something similar", "Pick a title and get look-alikes ranked by shared genres, creators, origin, and rating.")
+    section("Find something similar", "Pick a title and get look-alikes ranked by shared genres, creators, origin, and rating.", anchor="find")
 
     with st.spinner("Indexing the catalog..."):
         recommender = get_recommender(df)
@@ -500,7 +684,7 @@ elif page == "Format":
             go_type = st.form_submit_button("Predict format")
 
     with right:
-        if go_type:
+        if go_type and not rate_limited("predict", 20):
             res = type_clf.predict({
                 "listed_in": ", ".join(chosen) or "Drama",
                 "rating": rating,
@@ -548,7 +732,7 @@ elif page == "Rating":
             go_rating = st.form_submit_button("Predict rating")
 
     with right:
-        if go_rating:
+        if go_rating and not rate_limited("predict", 20):
             res = rating_clf.predict({
                 "listed_in": ", ".join(chosen) or "Dramas",
                 "type": fmt,
@@ -575,7 +759,7 @@ elif page == "Rating":
 # Segments: clustering
 # ==============================================================================
 
-else:
+elif page == "Segments":
     section("Map the catalog", "K-Means groups similar titles; PCA flattens them into a map you can explore.")
 
     c1, c2 = st.columns([3, 2])
@@ -587,6 +771,8 @@ else:
 
     fig = clusterer.create_2d_plot() if view == "2D map" else clusterer.create_3d_plot()
     fig.update_layout(height=520 if view == "2D map" else 580)
+    render(f'<p class="sr-only">Scatter plot of all {len(df):,} titles projected with PCA and coloured by segment; '
+           'the table below summarises each segment.</p>')
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
     render('<div class="label">Segment profiles</div>')
@@ -604,3 +790,88 @@ else:
             "sample_titles": "Examples",
         },
     )
+
+
+# ==============================================================================
+# FAQ (with feedback form -> thank-you page)
+# ==============================================================================
+
+elif page == "FAQ":
+    section("Frequently asked questions", "How the tools work, where the data comes from, and how your data is handled.")
+    render('<div class="faq">' + "".join(
+        f'<details class="card faq-item"><summary><span>{esc(q)}</span><span class="more">Answer</span></summary>'
+        f'<p class="synopsis">{esc(a)}</p></details>' for q, a in site.FAQ) + "</div>")
+    render(f'<p class="inline-links">Still curious? Try the {link("discover", "recommender")}, '
+           f'the {link("format", "format predictor")}, or read the {link("privacy", "privacy policy")}.</p>')
+
+    render('<div class="label">Send feedback</div>')
+    with st.form("feedback_form", border=False):
+        topic = st.selectbox("Topic", site.FEEDBACK_TOPICS)
+        message = st.text_area("Message", max_chars=site.MAX_FEEDBACK_CHARS,
+                               placeholder="What worked, what didn't, what you'd like to see. Please don't include personal details.")
+        sent = st.form_submit_button("Send feedback")
+    if sent:
+        if not message.strip():
+            st.warning("Please write a message before sending.")
+        elif not rate_limited("feedback", 3, 600):
+            site.save_feedback(topic, message)
+            st.query_params["page"] = "thanks"
+            st.rerun()
+
+
+# ==============================================================================
+# Legal pages
+# ==============================================================================
+
+elif page == "Privacy":
+    section("Privacy policy", f"Last updated {site.LAST_UPDATED}.")
+    prose(site.PRIVACY)
+
+elif page == "Terms":
+    section("Terms of use", f"Last updated {site.LAST_UPDATED}.")
+    prose(site.TERMS)
+
+
+# ==============================================================================
+# Thank-you page
+# ==============================================================================
+
+elif page == "Thank you":
+    render(f"""
+    <div class="card result status-page">
+      <div class="big">Thank you</div>
+      <div class="sub">Your feedback was received. It helps make these tools better.</div>
+      <div class="cta-row">{link("discover", "Back to recommendations", "cta primary")}{link("faq", "Read the FAQ", "cta ghost")}</div>
+    </div>
+    """)
+
+
+# ==============================================================================
+# Custom 404
+# ==============================================================================
+
+else:
+    render(f"""
+    <div class="card result status-page">
+      <div class="label" style="margin:0">Error 404</div>
+      <div class="big">Lost in the credits</div>
+      <div class="sub">We couldn't find that page. It may have moved, or the link may be mistyped.</div>
+      <div class="cta-row">{link("discover", "Go to recommendations", "cta primary")}{link("faq", "Visit the FAQ", "cta ghost")}</div>
+    </div>
+    """)
+
+
+# ==============================================================================
+# Footer (internal links) and sticky mobile CTA
+# ==============================================================================
+
+_footer_links = "".join(link(p.slug, p.label if p.tool else p.title) for p in site.PAGES.values() if p.indexable)
+render(f"""
+<footer class="site-footer">
+  <nav aria-label="Footer">{_footer_links}<a href="#" data-cookie-settings>Cookie settings</a>
+  <a href="https://github.com/hashimrazix-beep/netflix-ml-analytics" target="_blank" rel="noopener">GitHub</a></nav>
+  <p>© 2026 Hashim Razi · An independent educational project, not affiliated with any streaming service.</p>
+</footer>
+""")
+if PAGE.slug != "discover":
+    render(f'<div class="mobile-cta">{link("discover", "Find your next watch", "cta primary")}</div>')

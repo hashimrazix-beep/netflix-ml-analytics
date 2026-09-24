@@ -88,6 +88,36 @@ The dashboard uses the "Holst" palette: deep navy (`#0D1B2A`, `#1B263B`) with st
 
 ---
 
+## Site features
+
+| Feature | Where |
+| :--- | :--- |
+| Pages & routing (`?page=discover`, `faq`, `privacy`, `terms`, …), custom 404, thank-you page | `app.py`, `src/site.py` |
+| Unique `<title>`, meta description, robots, canonical, Open Graph / Twitter tags, JSON-LD (breadcrumbs, FAQ) | `static/site.js` |
+| Favicon set, Open Graph image (compressed), `sitemap.xml`, `robots.txt` | `scripts/generate_assets.py` → `static/` |
+| Cookie banner and consent-gated Google Analytics 4 | `static/site.js` |
+| Per-session rate limiting (page loads, predictions, feedback) | `src/site.py` → `allow()` |
+
+### Settings
+
+Add these in Streamlit Cloud under **App settings → Secrets**, or as environment variables:
+
+```toml
+APP_URL = "https://movie-ml-analytics.streamlit.app"   # your public URL (used in canonical/OG/sitemap)
+GA_MEASUREMENT_ID = "G-XXXXXXXXXX"                       # GA4 ID; analytics stays off until this is set
+```
+
+If your URL changes, regenerate the sitemap and robots file: `python scripts/generate_assets.py --url <your-url>`.
+
+### Streamlit limitations
+
+- Streamlit serves static files from `/app/static/`, not the site root. Search engines only read `robots.txt` at the root, so this one is informational. Submit `…/app/static/sitemap.xml` directly in Google Search Console instead.
+- Streamlit builds the page with JavaScript, so meta and Open Graph tags are added after load. Google renders JavaScript and sees them. Social-preview crawlers (Facebook, LinkedIn, X) mostly don't, so link previews may show the default Streamlit title.
+- The 404 page is shown with HTTP status 200, because Streamlit controls the response code.
+- Rate limiting is per browser session. IP-level limits need a reverse proxy in front of the app, which Streamlit Community Cloud doesn't allow.
+
+---
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

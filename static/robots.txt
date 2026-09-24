@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /?page=thanks
+
+Sitemap: https://movie-ml-analytics.streamlit.app/app/static/sitemap.xml
