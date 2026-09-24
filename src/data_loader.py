@@ -1,9 +1,8 @@
 """
-Data loading and preprocessing module for Netflix ML Analytics.
+Data loading and preprocessing module for Movie ML Analytics.
 Handles cleaning, missing value imputation, feature engineering, and data preparation.
 """
 
-import os
 from pathlib import Path
 from typing import Optional, Tuple
 import pandas as pd
@@ -37,7 +36,7 @@ def find_data_file(custom_path: Optional[str] = None) -> Path:
 
 
 def load_raw_data(filepath: Optional[str] = None) -> pd.DataFrame:
-    """Load the raw Netflix dataset into a pandas DataFrame."""
+    """Load the raw catalog dataset into a pandas DataFrame."""
     resolved_path = find_data_file(filepath)
     df = pd.read_csv(resolved_path)
     return df
@@ -59,14 +58,77 @@ def parse_duration(val: str) -> Tuple[int, str]:
         return 0, "Unknown"
 
 
+# The catalog's genre labels are format-specific ("TV Dramas" vs "Dramas",
+# "Docuseries" vs "Documentaries"), so using them raw to predict Movie vs
+# TV Show leaks the target. This maps each label to a format-neutral genre.
+NEUTRAL_GENRE_MAP = {
+    "Action & Adventure": "Action & Adventure",
+    "TV Action & Adventure": "Action & Adventure",
+    "Anime Features": "Anime",
+    "Anime Series": "Anime",
+    "British TV Shows": "British",
+    "Children & Family Movies": "Kids & Family",
+    "Kids' TV": "Kids & Family",
+    "Classic & Cult TV": "Classic & Cult",
+    "Classic Movies": "Classic & Cult",
+    "Cult Movies": "Classic & Cult",
+    "Comedies": "Comedy",
+    "TV Comedies": "Comedy",
+    "Crime TV Shows": "Crime",
+    "Documentaries": "Documentary",
+    "Docuseries": "Documentary",
+    "Dramas": "Drama",
+    "TV Dramas": "Drama",
+    "Faith & Spirituality": "Faith & Spirituality",
+    "Horror Movies": "Horror",
+    "TV Horror": "Horror",
+    "Independent Movies": "Independent",
+    "International Movies": "International",
+    "International TV Shows": "International",
+    "Korean TV Shows": "Korean",
+    "LGBTQ Movies": "LGBTQ",
+    "Music & Musicals": "Music & Musicals",
+    "Reality TV": "Reality",
+    "Romantic Movies": "Romance",
+    "Romantic TV Shows": "Romance",
+    "Sci-Fi & Fantasy": "Sci-Fi & Fantasy",
+    "TV Sci-Fi & Fantasy": "Sci-Fi & Fantasy",
+    "Science & Nature TV": "Science & Nature",
+    "Spanish-Language TV Shows": "Spanish-Language",
+    "Sports Movies": "Sports",
+    "Stand-Up Comedy": "Stand-Up & Talk",
+    "Stand-Up Comedy & Talk Shows": "Stand-Up & Talk",
+    "Teen TV Shows": "Teen",
+    "TV Mysteries": "Mystery",
+    "Thrillers": "Thriller",
+    "TV Thrillers": "Thriller",
+    # Bare format labels carry no genre information.
+    "Movies": None,
+    "TV Shows": None,
+}
+
+
+def neutralize_genres(listed_in: str) -> str:
+    """Map a comma-separated genre string to format-neutral genre labels."""
+    if not isinstance(listed_in, str):
+        return "Other"
+    genres = []
+    for raw in listed_in.split(","):
+        label = raw.strip()
+        neutral = NEUTRAL_GENRE_MAP.get(label, label)
+        if neutral and neutral not in genres:
+            genres.append(neutral)
+    return ", ".join(genres) if genres else "Other"
+
+
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Clean and engineer features on the Netflix dataset:
+    Clean and engineer features on the catalog dataset:
     - Handles 'Not Given' and NaN entries
     - Standardizes text columns
     - Extracts duration numeric value & unit
     - Extracts date_added year, month, and day
-    - Creates NLP feature representation 'content_soup'
+    - Maps genres to format-neutral labels ('genres_neutral')
     """
     cleaned = df.copy()
 
@@ -113,19 +175,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
         lambda x: x.split(",")[0].strip() if isinstance(x, str) else "Unknown"
     )
 
-    # Content soup for NLP / recommendation:
-    # Combines genres, director, country, title, and type
-    def build_soup(row) -> str:
-        genres = " ".join([g.strip().replace(" ", "_").lower() for g in row["listed_in"].split(",")])
-        director = row["director"].replace(" ", "_").lower() if row["director"] != "Unknown Director" else ""
-        country = row["country"].replace(" ", "_").lower() if row["country"] != "Unknown Country" else ""
-        title = row["title"].lower()
-        content_type = row["type"].lower()
-        rating = row["rating"].lower()
-        soup = f"{title} {genres} {director} {country} {content_type} {rating}"
-        return " ".join(soup.split())
-
-    cleaned["content_soup"] = cleaned.apply(build_soup, axis=1)
+    cleaned["genres_neutral"] = cleaned["listed_in"].apply(neutralize_genres)
 
     return cleaned
 
@@ -140,5 +190,5 @@ if __name__ == "__main__":
     df = get_preprocessed_data()
     print("Preprocessed dataset successfully!")
     print(f"Shape: {df.shape}")
-    print(f"Sample content soup:\n{df['content_soup'].iloc[0]}")
+    print(f"Sample neutral genres: {df['genres_neutral'].iloc[1]}")
     print(f"Columns: {list(df.columns)}")

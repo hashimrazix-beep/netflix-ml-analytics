@@ -1,6 +1,6 @@
 """
-Netflix ML Analytics Package
-Production-grade machine learning pipelines and interactive analytics for Netflix dataset.
+Movie ML Analytics Package
+Machine learning pipelines and interactive analytics for a movie & TV catalog.
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

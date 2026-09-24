@@ -1,12 +1,12 @@
 """
-Recommendation System Module for Netflix ML Analytics.
+Recommendation System Module for Movie ML Analytics.
 Implements TF-IDF vectorization and Cosine Similarity to recommend similar titles.
 """
 
-import os
+import re
 import sys
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Dict, List, Optional
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -22,52 +22,59 @@ import joblib
 from src.data_loader import get_preprocessed_data
 
 
-class NetflixRecommender:
+class MovieRecommender:
     """
     Content-Based Recommendation Engine using TF-IDF and Cosine Similarity.
-    Recommends titles based on genres, director, country, and title keywords.
+    Recommends titles based on shared genres, directors, countries, and rating.
     """
 
-    def __init__(self, max_features: int = 8000, ngram_range: tuple = (1, 2)):
+    def __init__(self, max_features: int = 8000):
+        # Each genre/director/country/rating is a single whole-entity token, so
+        # "Kirsten Johnson" never matches an unrelated "Johnson".
         self.vectorizer = TfidfVectorizer(
-            stop_words="english",
+            token_pattern=r"\S+",
+            lowercase=False,
+            sublinear_tf=True,
             max_features=max_features,
-            ngram_range=ngram_range,
         )
         self.tfidf_matrix = None
         self.df: Optional[pd.DataFrame] = None
         self.indices: Dict[str, int] = {}
 
+    @staticmethod
+    def _entity_tokens(prefix: str, text: str, skip: tuple = ()) -> List[str]:
+        """Turn 'United States, France' into ['c_united_states', 'c_france']."""
+        tokens = []
+        for part in str(text).split(","):
+            part = part.strip()
+            if not part or part in skip or part.lower() == "nan":
+                continue
+            tokens.append(prefix + re.sub(r"\W+", "_", part.lower()).strip("_"))
+        return tokens
+
     def _prepare_metadata_soup(self, df: pd.DataFrame) -> pd.Series:
-        """Create clean feature soup combining listed_in, director, country, and title."""
-        def make_soup(row):
-            genres = str(row.get("listed_in", "")).replace(",", " ").lower()
-            director = str(row.get("director", "")).lower()
-            if director in ["unknown director", "not given"]:
-                director = ""
-            country = str(row.get("country", "")).lower()
-            if country in ["unknown country", "not given"]:
-                country = ""
-            title = str(row.get("title", "")).lower()
-            content_type = str(row.get("type", "")).lower()
-            rating = str(row.get("rating", "")).lower()
-            
-            # Combine key features
-            soup = f"{title} {genres} {genres} {director} {country} {content_type} {rating}"
-            return " ".join(soup.split())
+        """Build an entity-token soup; genres are repeated to weigh them highest."""
+        def make_soup(row) -> str:
+            tokens = (
+                self._entity_tokens("g_", row.get("listed_in", "")) * 2
+                + self._entity_tokens("d_", row.get("director", ""), ("Unknown Director", "Not Given"))
+                + self._entity_tokens("c_", row.get("country", ""), ("Unknown Country", "Not Given"))
+                + self._entity_tokens("r_", row.get("rating", ""))
+            )
+            return " ".join(tokens)
 
         return df.apply(make_soup, axis=1)
 
-    def fit(self, df: pd.DataFrame) -> "NetflixRecommender":
+    def fit(self, df: pd.DataFrame) -> "MovieRecommender":
         """Fit TF-IDF on the dataset and build indices."""
         self.df = df.reset_index(drop=True).copy()
         soups = self._prepare_metadata_soup(self.df)
         self.tfidf_matrix = self.vectorizer.fit_transform(soups)
 
-        # Build case-insensitive index map
-        self.indices = {
-            title.strip().lower(): idx for idx, title in enumerate(self.df["title"])
-        }
+        # Build case-insensitive index map; duplicate titles resolve to the first entry
+        self.indices = {}
+        for idx, title in enumerate(self.df["title"]):
+            self.indices.setdefault(title.strip().lower(), idx)
         return self
 
     def find_title(self, query: str) -> Optional[str]:
@@ -114,25 +121,22 @@ class NetflixRecommender:
         target_vec = self.tfidf_matrix[idx]
         sim_scores = cosine_similarity(target_vec, self.tfidf_matrix).flatten()
 
-        # Get sorted indices (descending)
-        ranked_indices = np.argsort(-sim_scores)
-
-        # Filter out self
-        ranked_indices = [i for i in ranked_indices if i != idx]
-
-        # Apply content_type filter if specified
+        # Exclude the query itself and, if requested, other formats
+        candidates = np.ones(len(self.df), dtype=bool)
+        candidates[idx] = False
         if content_type_filter:
-            ranked_indices = [
-                i for i in ranked_indices
-                if str(self.df.loc[i, "type"]).lower() == content_type_filter.lower()
-            ]
+            candidates &= (
+                self.df["type"].str.lower() == content_type_filter.lower()
+            ).to_numpy()
 
-        top_indices = ranked_indices[:top_n]
+        # Rank remaining candidates by similarity (descending, stable for ties)
+        candidate_idx = np.flatnonzero(candidates)
+        order = np.argsort(-sim_scores[candidate_idx], kind="stable")
+        top_indices = candidate_idx[order][:top_n]
         top_scores = [round(float(sim_scores[i]), 4) for i in top_indices]
 
         results = self.df.iloc[top_indices].copy()
         results["similarity_score"] = top_scores
-        results["query_title"] = matched_title
 
         columns_to_return = [
             "title",
@@ -153,16 +157,16 @@ class NetflixRecommender:
         joblib.dump(self, filepath)
 
     @classmethod
-    def load(cls, filepath: str) -> "NetflixRecommender":
+    def load(cls, filepath: str) -> "MovieRecommender":
         """Load persisted recommender artifact."""
         return joblib.load(filepath)
 
 
-def build_recommender(df: Optional[pd.DataFrame] = None) -> NetflixRecommender:
-    """Helper to initialize and fit recommender on cleaned Netflix data."""
+def build_recommender(df: Optional[pd.DataFrame] = None) -> MovieRecommender:
+    """Helper to initialize and fit recommender on the cleaned catalog."""
     if df is None:
         df = get_preprocessed_data()
-    recommender = NetflixRecommender()
+    recommender = MovieRecommender()
     recommender.fit(df)
     return recommender
 

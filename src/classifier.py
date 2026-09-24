@@ -1,15 +1,14 @@
 """
-Classification Models Module for Netflix ML Analytics.
+Classification Models Module for Movie ML Analytics.
 Implements:
 1. ContentTypeClassifier (Binary: Movie vs TV Show)
 2. AudienceRatingClassifier (Multi-Class: TV-MA, TV-14, R, PG-13, TV-PG, etc.)
 Includes full evaluation metrics, confusion matrix computation, and real-time inference.
 """
 
-import os
 import sys
 from pathlib import Path
-from typing import Dict, Any, Tuple, Optional, List
+from typing import Dict, Any, Optional
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -33,9 +32,12 @@ from sklearn.metrics import (
     confusion_matrix,
     classification_report,
 )
-import joblib
+from src.data_loader import get_preprocessed_data, neutralize_genres, parse_duration
 
-from src.data_loader import get_preprocessed_data, parse_duration
+
+def _split_genres(text: str):
+    """Tokenize a comma-separated genre string into whole genre labels."""
+    return [g.strip() for g in text.split(",") if g.strip()]
 
 
 # ==============================================================================
@@ -45,7 +47,8 @@ from src.data_loader import get_preprocessed_data, parse_duration
 class ContentTypeClassifier:
     """
     Binary classifier predicting whether a title is a 'Movie' or 'TV Show'.
-    Uses genre information, audience rating, release year, and country.
+    Uses format-neutral genres, audience rating, and release year. Raw genre
+    labels are not used because they name the format ("TV Dramas").
     """
 
     def __init__(self, model_type: str = "rf"):
@@ -59,13 +62,15 @@ class ContentTypeClassifier:
             transformers=[
                 (
                     "text_genre",
-                    TfidfVectorizer(max_features=500, ngram_range=(1, 2)),
-                    "listed_in",
+                    TfidfVectorizer(
+                        tokenizer=_split_genres, token_pattern=None, lowercase=False
+                    ),
+                    "genres_neutral",
                 ),
                 (
                     "cat_features",
                     OneHotEncoder(handle_unknown="ignore", sparse_output=False),
-                    ["rating", "primary_genre"],
+                    ["rating"],
                 ),
                 (
                     "num_features",
@@ -81,6 +86,7 @@ class ContentTypeClassifier:
                 n_estimators=120,
                 max_depth=14,
                 min_samples_split=4,
+                class_weight="balanced",
                 random_state=42,
                 n_jobs=-1,
             )
@@ -88,6 +94,7 @@ class ContentTypeClassifier:
             classifier = LogisticRegression(
                 max_iter=1000,
                 C=1.0,
+                class_weight="balanced",
                 random_state=42,
             )
 
@@ -101,7 +108,9 @@ class ContentTypeClassifier:
     ) -> Dict[str, Any]:
         """Train classifier and compute validation metrics."""
         data = df.dropna(subset=["type", "listed_in"]).copy()
-        X = data[["listed_in", "rating", "primary_genre", "release_year"]]
+        if "genres_neutral" not in data.columns:
+            data["genres_neutral"] = data["listed_in"].apply(neutralize_genres)
+        X = data[["genres_neutral", "rating", "release_year"]]
         y = data["type"]
 
         X_train, X_test, y_train, y_test = train_test_split(
@@ -144,20 +153,18 @@ class ContentTypeClassifier:
     def predict(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
         Real-time inference on a single title's metadata.
-        Expected keys: 'listed_in', 'rating', 'release_year'
+        Expected keys: 'listed_in' (raw or neutral genres), 'rating', 'release_year'
         """
         if self.pipeline is None:
             raise ValueError("Model is not trained. Call train() first.")
 
-        listed_in = str(metadata.get("listed_in", "Comedies, Dramas"))
-        primary_genre = listed_in.split(",")[0].strip()
+        genres = neutralize_genres(str(metadata.get("listed_in", "Comedy, Drama")))
         rating = str(metadata.get("rating", "TV-MA"))
         release_year = int(metadata.get("release_year", 2021))
 
         input_df = pd.DataFrame([{
-            "listed_in": listed_in,
+            "genres_neutral": genres,
             "rating": rating,
-            "primary_genre": primary_genre,
             "release_year": release_year,
         }])
 
@@ -235,9 +242,9 @@ class AudienceRatingClassifier:
             )
         else:
             classifier = LogisticRegression(
-                max_iter=1000,
-                multi_class="multinomial",
+                max_iter=2000,
                 C=1.0,
+                class_weight="balanced",
                 random_state=42,
             )
 
@@ -267,7 +274,7 @@ class AudienceRatingClassifier:
 
         acc = accuracy_score(y_test, y_pred)
         p_w, r_w, f1_w, _ = precision_recall_fscore_support(y_test, y_pred, average="weighted", zero_division=0)
-        p_m, r_m, f1_m, _ = precision_recall_fscore_support(y_test, y_pred, average="macro", zero_division=0)
+        _, _, f1_m, _ = precision_recall_fscore_support(y_test, y_pred, average="macro", zero_division=0)
         cm = confusion_matrix(y_test, y_pred, labels=self.classes_)
 
         self.metrics = {

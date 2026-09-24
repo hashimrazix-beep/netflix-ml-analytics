@@ -1,9 +1,13 @@
+"""
+Content Segmentation Module for Movie ML Analytics.
+K-Means clustering over catalog metadata with 2D/3D PCA projections.
+"""
+
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
-from typing import Dict, Any, Tuple, Optional, List
+from typing import Dict, Any, Optional
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -18,39 +22,42 @@ from sklearn.compose import ColumnTransformer
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
-try:
-    import plotly.express as px
-    import plotly.graph_objects as go
-    HAS_PLOTLY = True
-except ImportError:
-    px = None
-    go = None
-    HAS_PLOTLY = False
-import joblib
+import plotly.express as px
+import plotly.graph_objects as go
 
 from src.data_loader import get_preprocessed_data
 
 
-class NetflixClusterer:
+class MovieClusterer:
     """
     Unsupervised segmentation pipeline using K-Means clustering
     and PCA for 2D/3D projection and interactive visualization.
     """
 
     CLUSTER_PALETTE = [
-        "#E50914",  # Netflix Red
-        "#00D2D3",  # Vibrant Cyan
-        "#54A0FF",  # Neon Blue
-        "#5F27CD",  # Purple
-        "#FF9F43",  # Orange
-        "#10AC84",  # Emerald Green
-        "#FF6B6B",  # Coral
-        "#FED330",  # Yellow
+        "#A78BFA",  # Lavender
+        "#FBBF24",  # Marquee Gold
+        "#2DD4BF",  # Teal
+        "#FB7185",  # Coral
+        "#60A5FA",  # Sky
+        "#F472B6",  # Orchid
+        "#A3E635",  # Lime
+        "#FDBA74",  # Peach
     ]
+
+    # Shared dark, transparent chart styling so plots sit on the app background
+    PLOT_LAYOUT = dict(
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Outfit, sans-serif", color="#C9C3EA"),
+        hoverlabel=dict(bgcolor="#1A1633", bordercolor="#3B3470", font_color="#F4F1FF"),
+    )
 
     def __init__(self, n_clusters: int = 5, random_state: int = 42):
         self.n_clusters = n_clusters
         self.random_state = random_state
+        self.df: Optional[pd.DataFrame] = None
         self.preprocessor = None
         self.kmeans = None
         self.pca_2d = None
@@ -82,7 +89,7 @@ class NetflixClusterer:
             remainder="drop",
         )
 
-    def fit(self, df: pd.DataFrame) -> "NetflixClusterer":
+    def fit(self, df: pd.DataFrame) -> "MovieClusterer":
         """Fit clustering pipeline and PCA projections."""
         self.df = df.copy().reset_index(drop=True)
         self.preprocessor = self._build_preprocessor()
@@ -185,36 +192,27 @@ class NetflixClusterer:
         return summary
 
     def create_2d_plot(self) -> go.Figure:
-        """Create a sleek dark-themed 2D PCA scatter plot using Plotly."""
+        """Create a dark-themed 2D PCA scatter plot."""
         fig = px.scatter(
             self.df,
             x="pca_x",
             y="pca_y",
             color="cluster_name",
             hover_data=["title", "type", "listed_in", "rating", "release_year"],
-            title=f"Netflix Content Segmentation ({self.n_clusters} Clusters, 2D PCA)",
             color_discrete_sequence=self.CLUSTER_PALETTE,
-            template="plotly_dark",
         )
+        fig.update_traces(marker=dict(size=6, opacity=0.75, line=dict(width=0)))
         fig.update_layout(
-            paper_bgcolor="#0E1117",
-            plot_bgcolor="#161B22",
-            font=dict(color="#E6EDF3"),
-            title_font=dict(size=18, color="#E50914"),
-            legend=dict(
-                title="Content Segment",
-                orientation="h",
-                yanchor="bottom",
-                y=-0.25,
-                xanchor="center",
-                x=0.5,
-            ),
-            margin=dict(l=40, r=40, t=60, b=80),
+            **self.PLOT_LAYOUT,
+            xaxis=dict(title="PC 1", showgrid=False, zeroline=False),
+            yaxis=dict(title="PC 2", showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=False),
+            legend=dict(title=None, orientation="h", yanchor="top", y=-0.12, xanchor="center", x=0.5),
+            margin=dict(l=10, r=10, t=10, b=10),
         )
         return fig
 
     def create_3d_plot(self) -> go.Figure:
-        """Create a 3D PCA scatter plot using Plotly."""
+        """Create a dark-themed 3D PCA scatter plot."""
         fig = px.scatter_3d(
             self.df,
             x="pca_x",
@@ -222,30 +220,33 @@ class NetflixClusterer:
             z="pca_z",
             color="cluster_name",
             hover_data=["title", "type", "listed_in", "rating"],
-            title=f"3D Feature Space Projection (K={self.n_clusters})",
             color_discrete_sequence=self.CLUSTER_PALETTE,
-            template="plotly_dark",
-            height=650,
         )
+        fig.update_traces(marker=dict(size=3, opacity=0.8))
         fig.update_layout(
-            paper_bgcolor="#0E1117",
-            font=dict(color="#E6EDF3"),
-            margin=dict(l=20, r=20, t=50, b=20),
+            **self.PLOT_LAYOUT,
+            scene=dict(
+                xaxis=dict(title="PC 1", backgroundcolor="rgba(0,0,0,0)"),
+                yaxis=dict(title="PC 2", backgroundcolor="rgba(0,0,0,0)"),
+                zaxis=dict(title="PC 3", backgroundcolor="rgba(0,0,0,0)"),
+            ),
+            legend=dict(title=None, orientation="h", yanchor="top", y=0, xanchor="center", x=0.5),
+            margin=dict(l=0, r=0, t=0, b=0),
         )
         return fig
 
 
-def build_clusterer(df: Optional[pd.DataFrame] = None, n_clusters: int = 5) -> NetflixClusterer:
-    """Helper to initialize and fit NetflixClusterer."""
+def build_clusterer(df: Optional[pd.DataFrame] = None, n_clusters: int = 5) -> MovieClusterer:
+    """Helper to initialize and fit MovieClusterer."""
     if df is None:
         df = get_preprocessed_data()
-    clusterer = NetflixClusterer(n_clusters=n_clusters)
+    clusterer = MovieClusterer(n_clusters=n_clusters)
     clusterer.fit(df)
     return clusterer
 
 
 if __name__ == "__main__":
-    print("Fitting NetflixClusterer...")
+    print("Fitting MovieClusterer...")
     clusterer = build_clusterer(n_clusters=5)
     print("Clusters successfully generated!")
     summary = clusterer.get_cluster_summary()
