@@ -179,35 +179,75 @@ DECLUTTERED_CSS = """
         border-right: 1px solid #1E293B !important;
     }
 
-    /* Sidebar Radio Button Restyling with Text Roll Effect & Card Hover */
-    div[data-testid="stRadio"] > div {
-        gap: 8px;
+    /* =========================================================================
+       TEXT-ROLL KINETIC NAVIGATION (Inspired by TextRoll Component)
+       ========================================================================= */
+    /* Remove all radio circles and native inputs */
+    div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
+        width: 100% !important;
     }
-    div[data-testid="stRadio"] label {
-        background: #111622 !important;
-        border: 1px solid #1E293B !important;
-        border-radius: 10px !important;
-        padding: 10px 14px !important;
-        margin-bottom: 3px !important;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+        display: none !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label input {
+        display: none !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        padding: 8px 0 !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 4px 0 !important;
+        margin: 0 !important;
         cursor: pointer !important;
+        transform: none !important;
+        position: relative !important;
+        overflow: visible !important;
     }
-    div[data-testid="stRadio"] label:hover {
-        border-color: #E50914 !important;
-        background: #161D2B !important;
-        box-shadow: 0 4px 15px rgba(229, 9, 20, 0.15) !important;
-        transform: translateX(4px) !important;
+    
+    /* TextRoll Kinetic Typography: Bold, Uppercase, Tracking */
+    div[data-testid="stRadio"] div[role="radiogroup"] label p {
+        font-size: 1.25rem !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: -0.03em !important;
+        line-height: 1.0 !important;
+        margin: 0 !important;
+        color: #475569 !important;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        display: block !important;
+        position: relative !important;
     }
-    /* Rolling Text effect on hover */
-    div[data-testid="stRadio"] label p {
-        font-weight: 600 !important;
-        font-size: 0.92rem !important;
-        color: #CBD5E1 !important;
-        transition: color 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }
-    div[data-testid="stRadio"] label:hover p {
+
+    /* Hover state: Bright White with lift */
+    div[data-testid="stRadio"] div[role="radiogroup"] label:hover p {
         color: #FFFFFF !important;
-        transform: translateY(-2px) !important;
+        transform: translateX(8px) scale(1.02) !important;
+        letter-spacing: -0.01em !important;
+    }
+
+    /* Active Selected State: Glowing Netflix Crimson */
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p {
+        color: #E50914 !important;
+        font-weight: 900 !important;
+        transform: translateX(8px) !important;
+        text-shadow: 0 0 20px rgba(229, 9, 20, 0.4) !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked)::before {
+        content: "" !important;
+        position: absolute !important;
+        left: -8px !important;
+        top: 15% !important;
+        height: 70% !important;
+        width: 3px !important;
+        background: #E50914 !important;
+        border-radius: 4px !important;
+        box-shadow: 0 0 10px #E50914 !important;
     }
 
     /* Button Styling */
@@ -290,56 +330,42 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar Navigation
+# Sidebar Navigation with TextRoll Uppercase Typography
 with st.sidebar:
-    st.markdown("### 🎬 Modules")
+    st.markdown("<p style='font-size:11px; font-weight:700; color:#64748B; letter-spacing:1.5px; margin-bottom:12px; text-transform:uppercase;'>Navigation</p>", unsafe_allow_html=True)
     active_tab = st.radio(
         "Select Pipeline",
         options=[
-            "🎬 Recommendations",
-            "📽️ Format Classifier",
-            "🔞 Rating Classifier",
-            "📊 Content Segmentation",
+            "RECOMMENDATIONS",
+            "FORMAT PREDICTOR",
+            "RATING CLASSIFIER",
+            "CONTENT SEGMENTATION",
         ],
         label_visibility="collapsed",
     )
 
-    st.markdown("---")
-    
-    # Restyled Telemetry Cards replacing the old clunky boxes
-    st.markdown(f"""
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-        <div style="background: rgba(22, 27, 34, 0.6); border: 1px solid #1E293B; border-radius: 10px; padding: 12px 14px;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 8px #22C55E;"></span>
-                    <span style="font-size: 0.78rem; font-weight: 600; color: #E2E8F0;">System Status</span>
-                </div>
-                <span style="font-size: 0.7rem; color: #4ADE80; font-weight: 500;">Online</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.72rem; color: #94A3B8; border-top: 1px solid #1E293B; padding-top: 6px;">
-                <span>📁 Dataset</span>
-                <span style="color: #CBD5E1; font-weight: 500;">{total_titles:,} entries</span>
-            </div>
-        </div>
-
-        <div style="background: rgba(22, 27, 34, 0.3); border: 1px solid #1E293B; border-radius: 10px; padding: 10px 14px;">
-            <div style="font-size: 0.75rem; font-weight: 600; color: #94A3B8; margin-bottom: 4px;">
-                ⚡ ML Architecture
-            </div>
-            <div style="font-size: 0.7rem; color: #64748B; line-height: 1.4;">
-                Scikit-Learn • Random Forest • TF-IDF • K-Means
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Clean Telemetry Pill with zero leading indentation (prevents markdown code block parsing)
+    telemetry_html = f"""<div style="margin-top: 45px; padding: 14px 16px; background: rgba(17, 22, 34, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px;">
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 8px #22C55E;"></span>
+<span style="font-size: 12px; font-weight: 600; color: #CBD5E1;">System Status</span>
+</div>
+<span style="font-size: 11px; color: #4ADE80; font-weight: 600;">Online</span>
+</div>
+<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.06); display: flex; justify-content: space-between; font-size: 11px; color: #64748B;">
+<span>Catalog</span>
+<span style="color: #94A3B8; font-weight: 600;">{total_titles:,} entries</span>
+</div>
+</div>"""
+    st.markdown(telemetry_html, unsafe_allow_html=True)
 
 
 # ==============================================================================
 # TAB 1: RECOMMENDATIONS
 # ==============================================================================
 
-if "Recommendations" in active_tab:
+if "RECOMMEND" in active_tab.upper():
     st.subheader("Content Recommendation Engine")
     st.caption("TF-IDF metadata embedding with Cosine Similarity ranking.")
 
@@ -424,7 +450,7 @@ if "Recommendations" in active_tab:
 # TAB 2: FORMAT CLASSIFIER
 # ==============================================================================
 
-elif "Format" in active_tab:
+elif "FORMAT" in active_tab.upper():
     st.subheader("Content Format Predictor")
     st.caption("Supervised binary classification (Movie vs. TV Show).")
 
@@ -500,7 +526,7 @@ elif "Format" in active_tab:
 # TAB 3: RATING CLASSIFIER
 # ==============================================================================
 
-elif "Rating" in active_tab:
+elif "RATING" in active_tab.upper():
     st.subheader("Audience Maturity Rating Classifier")
     st.caption("Multi-class classification across 9 viewer age ratings.")
 
@@ -612,7 +638,7 @@ elif "Rating" in active_tab:
 # TAB 4: CONTENT SEGMENTATION
 # ==============================================================================
 
-elif "Segmentation" in active_tab:
+elif "SEGMENT" in active_tab.upper():
     st.subheader("Unsupervised Catalog Clustering")
     st.caption("K-Means feature clustering with Principal Component Analysis (PCA).")
 
