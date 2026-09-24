@@ -17,7 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
 import pandas as pd
 import streamlit as st
 
-from src.data_loader import get_preprocessed_data
+from src.data_loader import get_preprocessed_data, neutralize_genres
 from src.recommender import MovieRecommender, build_recommender
 from src.classifier import (
     ContentTypeClassifier,
@@ -152,6 +152,14 @@ div[data-testid="stButtonGroup"] button p { font-size: 0.92rem !important; color
 .card .meta { color: var(--faint); font-size: 0.8rem; }
 .card .genres { color: var(--muted); font-size: 0.8rem; margin-top: 0.55rem; line-height: 1.45; }
 .card-top { display: flex; justify-content: space-between; align-items: center; }
+.rec-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+@media (max-width: 900px) { .rec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .rec-grid { grid-template-columns: 1fr; } }
+.card.rec { margin: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+.rec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; }
+.card.rec .title { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tags { display: flex; gap: 0.4rem; flex-wrap: nowrap; overflow: hidden; margin-top: 0.2rem; }
+.tags .pill { white-space: nowrap; color: var(--sand); }
 .pill { font-size: 0.7rem; font-weight: 600; padding: 0.18rem 0.6rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
 .score { font-size: 0.8rem; font-weight: 700; color: var(--sand); }
 .bar { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.06); margin-top: 0.85rem; overflow: hidden; }
@@ -332,22 +340,21 @@ if page == "Discover":
     recs = recommender.get_recommendations(selected, top_n=top_k, content_type_filter=type_filter)
     render('<div class="label">You might also like</div>')
 
-    cols = st.columns(3)
+    cards = []
     for i, row in recs.iterrows():
-        score = float(row["similarity_score"])
-        with cols[i % 3]:
-            render(f"""
-            <div class="card" style="animation-delay:{i * 0.07:.2f}s">
-              <div class="card-top">
-                <span class="pill">{esc(row['type'])}</span>
-                <span class="score">{score * 100:.0f}% match</span>
-              </div>
-              <div class="title">{esc(row['title'])}</div>
-              <div class="meta">{esc(row['release_year'])} · {esc(row['duration'])} · {esc(row['rating'])}</div>
-              <div class="genres">{esc(row['listed_in'])}</div>
-              <div class="bar"><span style="width:{score * 100:.0f}%; animation-delay:{0.2 + i * 0.07:.2f}s"></span></div>
-            </div>
-            """)
+        genres = neutralize_genres(row["listed_in"]).split(", ")[:2]
+        tags = "".join(f'<span class="pill">{esc(g)}</span>' for g in genres)
+        cards.append(f"""
+        <div class="card rec" style="animation-delay:{i * 0.06:.2f}s">
+          <div class="rec-head">
+            <div class="title" title="{esc(row['title'])}">{esc(row['title'])}</div>
+            <span class="score">{float(row['similarity_score']) * 100:.0f}%</span>
+          </div>
+          <div class="meta">{esc(row['type'])} · {esc(row['release_year'])} · {esc(row['duration'])} · {esc(row['rating'])}</div>
+          <div class="tags">{tags}</div>
+        </div>
+        """)
+    render('<div class="rec-grid">' + "".join(cards) + "</div>")
 
 
 # ==============================================================================
