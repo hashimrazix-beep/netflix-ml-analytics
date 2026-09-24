@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from src.data_loader import get_preprocessed_data, neutralize_genres
 from src.recommender import MovieRecommender, build_recommender
@@ -68,22 +69,11 @@ html, body, [class*="css"], .stApp, button, input, textarea, select {
 }
 
 /* ---------- Canvas & drifting aurora ---------- */
-.stApp { background: var(--bg); color: var(--text); }
-.stApp::before {
-  content: "";
-  position: fixed; inset: -20%;
-  background:
-    radial-gradient(40% 35% at 15% 10%, rgba(65, 90, 119, 0.45), transparent 70%),
-    radial-gradient(35% 30% at 85% 15%, rgba(119, 141, 122, 0.18), transparent 70%),
-    radial-gradient(40% 35% at 60% 95%, rgba(212, 196, 168, 0.08), transparent 70%);
-  animation: aurora 22s ease-in-out infinite alternate;
-  pointer-events: none; z-index: 0;
-}
-@keyframes aurora {
-  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50%  { transform: translate3d(3%, -2%, 0) rotate(4deg); }
-  100% { transform: translate3d(-3%, 2%, 0) rotate(-3deg); }
-}
+html, body { background: var(--bg) !important; }
+.stApp, div[data-testid="stAppViewContainer"], section[data-testid="stMain"] { background: transparent !important; color: var(--text); }
+#beams-bg { background: var(--bg); }
+iframe[title="beams_background"] { display: none; }
+div[data-testid="stElementContainer"]:has(iframe[height="0"]) { display: none; }
 
 /* ---------- Hide Streamlit chrome ---------- */
 header[data-testid="stHeader"], footer, #MainMenu,
@@ -217,6 +207,8 @@ label, .stRadio label p, div[data-testid="stWidgetLabel"] p { color: var(--muted
 </style>
 """
 st.markdown(THEME_CSS, unsafe_allow_html=True)
+# Animated beams background (runs once, attaches a canvas to the page)
+components.html(f"<script>{(PROJECT_ROOT / 'static' / 'beams.js').read_text()}</script>", height=0)
 
 
 def render(markup: str) -> None:
