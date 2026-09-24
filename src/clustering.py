@@ -1,8 +1,4 @@
-"""
-Content Segmentation & Clustering Module for Netflix ML Analytics.
-Implements K-Means clustering, PCA dimension reduction (2D and 3D),
-and Plotly interactive visualizations.
-"""
+from __future__ import annotations
 
 import os
 import sys
@@ -22,8 +18,14 @@ from sklearn.compose import ColumnTransformer
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
-import plotly.express as px
-import plotly.graph_objects as go
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    HAS_PLOTLY = True
+except ImportError:
+    px = None
+    go = None
+    HAS_PLOTLY = False
 import joblib
 
 from src.data_loader import get_preprocessed_data
