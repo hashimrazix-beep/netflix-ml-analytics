@@ -53,7 +53,7 @@ THEME_CSS = """
   --sand: #D4C4A8;
   --cream: #F4F1DE;
   --bg: var(--navy);
-  --surface: rgba(27, 38, 59, 0.72);
+  --surface: rgba(27, 38, 59, 0.88);
   --surface-solid: var(--ink);
   --line: rgba(212, 196, 168, 0.12);
   --line-strong: rgba(212, 196, 168, 0.4);
@@ -108,7 +108,7 @@ div[data-testid="stMainBlockContainer"] div[data-testid="stVerticalBlock"] > div
 /* ---------- Navigation (segmented control) ---------- */
 div[data-testid="stButtonGroup"] > div {
   background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px; gap: 4px;
-  backdrop-filter: blur(12px);
+ 
 }
 div[data-testid="stButtonGroup"] button {
   border: none !important; border-radius: 999px !important; background: transparent !important;
@@ -133,7 +133,7 @@ div[data-testid="stButtonGroup"] button p { font-size: 0.92rem !important; color
 /* ---------- Cards ---------- */
 .card {
   position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
-  padding: 1.1rem 1.2rem; backdrop-filter: blur(12px); margin-bottom: 1rem;
+  padding: 1.1rem 1.2rem; margin-bottom: 1rem;
   animation: rise 0.7s var(--ease) both;
   transition: transform 0.35s var(--ease), border-color 0.35s var(--ease), box-shadow 0.35s var(--ease);
 }
@@ -185,7 +185,7 @@ details[open].card.rec { border-color: var(--line-strong); }
 .strip span { font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
 
 /* ---------- Native widgets ---------- */
-div[data-testid="stForm"] { background: var(--surface); border: 1px solid var(--line) !important; border-radius: 16px; padding: 1.3rem; backdrop-filter: blur(12px); }
+div[data-testid="stForm"] { background: var(--surface); border: 1px solid var(--line) !important; border-radius: 16px; padding: 1.3rem; }
 div[data-baseweb="select"] > div, div[data-baseweb="input"] > div { background: rgba(13, 27, 42, 0.6) !important; border-color: var(--line) !important; border-radius: 10px !important; transition: border-color 0.25s var(--ease); }
 div[data-baseweb="select"] > div:hover { border-color: var(--line-strong) !important; }
 span[data-baseweb="tag"] { background: rgba(119, 141, 122, 0.35) !important; color: var(--text) !important; border-radius: 8px !important; }
