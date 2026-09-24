@@ -35,14 +35,14 @@ class MovieClusterer:
     """
 
     CLUSTER_PALETTE = [
-        "#A78BFA",  # Lavender
-        "#FBBF24",  # Marquee Gold
-        "#2DD4BF",  # Teal
-        "#FB7185",  # Coral
-        "#60A5FA",  # Sky
-        "#F472B6",  # Orchid
-        "#A3E635",  # Lime
-        "#FDBA74",  # Peach
+        "#D4C4A8",  # Sand
+        "#778D7A",  # Sage
+        "#8FA9C8",  # Light steel
+        "#F4F1DE",  # Cream
+        "#A9BBA8",  # Pale sage
+        "#B39B74",  # Deep sand
+        "#5F7C9E",  # Steel
+        "#C9D3C0",  # Mist
     ]
 
     # Shared dark, transparent chart styling so plots sit on the app background
@@ -50,8 +50,8 @@ class MovieClusterer:
         template="plotly_dark",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Outfit, sans-serif", color="#C9C3EA"),
-        hoverlabel=dict(bgcolor="#1A1633", bordercolor="#3B3470", font_color="#F4F1FF"),
+        font=dict(family="Outfit, sans-serif", color="#D4C4A8"),
+        hoverlabel=dict(bgcolor="#1B263B", bordercolor="#415A77", font_color="#F4F1DE"),
     )
 
     def __init__(self, n_clusters: int = 5, random_state: int = 42):
@@ -205,7 +205,7 @@ class MovieClusterer:
         fig.update_layout(
             **self.PLOT_LAYOUT,
             xaxis=dict(title="PC 1", showgrid=False, zeroline=False),
-            yaxis=dict(title="PC 2", showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=False),
+            yaxis=dict(title="PC 2", showgrid=True, gridcolor="rgba(212,196,168,0.08)", zeroline=False),
             legend=dict(title=None, orientation="h", yanchor="top", y=-0.12, xanchor="center", x=0.5),
             margin=dict(l=10, r=10, t=10, b=10),
         )

@@ -79,7 +79,7 @@ Each module can also be run on its own, e.g. `python src/recommender.py`.
 
 ## Dashboard
 
-The dashboard uses a dark "Midnight Marquee" palette: deep ink-violet with lavender, coral, and gold accents. It features:
+The dashboard uses the "Holst" palette: deep navy (`#0D1B2A`, `#1B263B`) with steel blue (`#415A77`), sage (`#778D7A`), sand (`#D4C4A8`), and cream (`#F4F1DE`). It features:
 - Pill navigation along the top, with no sidebar.
 - A slowly drifting aurora background and a shimmering gradient wordmark.
 - Cards and results that rise in one after another as a page loads, and lift on hover.

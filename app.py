@@ -37,7 +37,7 @@ st.set_page_config(
 
 
 # ==============================================================================
-# Theme: "Midnight Marquee" - ink violet base, lavender / gold / coral / teal accents
+# Theme: "Holst" - deep navy base, steel blue / sage / sand / cream accents
 # ==============================================================================
 
 THEME_CSS = """
@@ -45,19 +45,21 @@ THEME_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --bg: #0B0917;
-  --surface: rgba(24, 20, 48, 0.72);
-  --surface-solid: #16132B;
-  --line: rgba(167, 139, 250, 0.14);
-  --line-strong: rgba(167, 139, 250, 0.38);
-  --text: #F4F1FF;
-  --muted: #9C95C9;
-  --faint: #6B6594;
-  --violet: #A78BFA;
-  --gold: #FBBF24;
-  --coral: #FB7185;
-  --teal: #2DD4BF;
-  --grad: linear-gradient(100deg, #A78BFA 0%, #FB7185 50%, #FBBF24 100%);
+  --navy: #0D1B2A;
+  --ink: #1B263B;
+  --steel: #415A77;
+  --sage: #778D7A;
+  --sand: #D4C4A8;
+  --cream: #F4F1DE;
+  --bg: var(--navy);
+  --surface: rgba(27, 38, 59, 0.72);
+  --surface-solid: var(--ink);
+  --line: rgba(212, 196, 168, 0.12);
+  --line-strong: rgba(212, 196, 168, 0.4);
+  --text: var(--cream);
+  --muted: var(--sand);
+  --faint: #8E9DAF;
+  --grad: linear-gradient(100deg, #778D7A 0%, #D4C4A8 55%, #F4F1DE 100%);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -71,9 +73,9 @@ html, body, [class*="css"], .stApp, button, input, textarea, select {
   content: "";
   position: fixed; inset: -20%;
   background:
-    radial-gradient(40% 35% at 15% 10%, rgba(167, 139, 250, 0.20), transparent 70%),
-    radial-gradient(35% 30% at 85% 15%, rgba(251, 113, 133, 0.14), transparent 70%),
-    radial-gradient(40% 35% at 60% 95%, rgba(45, 212, 191, 0.10), transparent 70%);
+    radial-gradient(40% 35% at 15% 10%, rgba(65, 90, 119, 0.45), transparent 70%),
+    radial-gradient(35% 30% at 85% 15%, rgba(119, 141, 122, 0.18), transparent 70%),
+    radial-gradient(40% 35% at 60% 95%, rgba(212, 196, 168, 0.08), transparent 70%);
   animation: aurora 22s ease-in-out infinite alternate;
   pointer-events: none; z-index: 0;
 }
@@ -94,7 +96,7 @@ div[data-testid="stDecoration"] { display: none !important; }
 @keyframes pop  { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
 @keyframes grow { from { width: 0; } }
 @keyframes shimmer { to { background-position: 200% center; } }
-@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.55); } 50% { box-shadow: 0 0 0 6px rgba(45, 212, 191, 0); } }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(119, 141, 122, 0.6); } 50% { box-shadow: 0 0 0 6px rgba(119, 141, 122, 0); } }
 
 div[data-testid="stMainBlockContainer"] div[data-testid="stVerticalBlock"] > div {
   animation: rise 0.6s var(--ease) both;
@@ -111,7 +113,7 @@ div[data-testid="stMainBlockContainer"] div[data-testid="stVerticalBlock"] > div
 .tagline { color: var(--muted); font-size: 1.02rem; margin-top: 0.45rem; font-weight: 400; }
 .stats { display: inline-flex; gap: 1.4rem; margin-top: 1rem; color: var(--faint); font-size: 0.86rem; flex-wrap: wrap; justify-content: center; }
 .stats b { color: var(--text); font-weight: 600; }
-.live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--teal); margin-right: 6px; vertical-align: middle; animation: pulse 2.4s infinite; }
+.live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--sage); margin-right: 6px; vertical-align: middle; animation: pulse 2.4s infinite; }
 
 /* ---------- Navigation (segmented control) ---------- */
 div[data-testid="stButtonGroup"] > div {
@@ -126,8 +128,8 @@ div[data-testid="stButtonGroup"] button {
 div[data-testid="stButtonGroup"] button:hover { color: var(--text) !important; transform: translateY(-1px); }
 div[data-testid="stButtonGroup"] button[aria-checked="true"],
 div[data-testid="stButtonGroup"] button[kind$="Active"] {
-  background: var(--grad) !important; background-size: 200% auto !important; color: #140F26 !important; font-weight: 700 !important;
-  box-shadow: 0 6px 24px -6px rgba(251, 113, 133, 0.55);
+  background: var(--grad) !important; background-size: 200% auto !important; color: var(--navy) !important; font-weight: 700 !important;
+  box-shadow: 0 6px 24px -6px rgba(212, 196, 168, 0.45);
   animation: shimmer 5s linear infinite;
 }
 div[data-testid="stButtonGroup"] button p { font-size: 0.92rem !important; color: inherit !important; }
@@ -145,17 +147,17 @@ div[data-testid="stButtonGroup"] button p { font-size: 0.92rem !important; color
   animation: rise 0.7s var(--ease) both;
   transition: transform 0.35s var(--ease), border-color 0.35s var(--ease), box-shadow 0.35s var(--ease);
 }
-.card:hover { transform: translateY(-4px); border-color: var(--line-strong); box-shadow: 0 18px 40px -18px rgba(167, 139, 250, 0.45); }
+.card:hover { transform: translateY(-4px); border-color: var(--line-strong); box-shadow: 0 18px 40px -18px rgba(212, 196, 168, 0.3); }
 .card .title { font-weight: 600; font-size: 1.02rem; color: var(--text); line-height: 1.3; margin: 0.55rem 0 0.2rem; }
 .card .meta { color: var(--faint); font-size: 0.8rem; }
 .card .genres { color: var(--muted); font-size: 0.8rem; margin-top: 0.55rem; line-height: 1.45; }
 .card-top { display: flex; justify-content: space-between; align-items: center; }
 .pill { font-size: 0.7rem; font-weight: 600; padding: 0.18rem 0.6rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
-.score { font-size: 0.8rem; font-weight: 700; color: var(--gold); }
+.score { font-size: 0.8rem; font-weight: 700; color: var(--sand); }
 .bar { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.06); margin-top: 0.85rem; overflow: hidden; }
 .bar > span { display: block; height: 100%; border-radius: 3px; background: var(--grad); animation: grow 1.1s var(--ease) both; }
 
-.focus { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; border-left: 3px solid var(--violet); }
+.focus { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; border-left: 3px solid var(--sage); }
 .focus .title { margin: 0; font-size: 1.15rem; }
 
 /* ---------- Prediction ---------- */
@@ -178,17 +180,17 @@ div[data-testid="stButtonGroup"] button p { font-size: 0.92rem !important; color
 
 /* ---------- Native widgets ---------- */
 div[data-testid="stForm"] { background: var(--surface); border: 1px solid var(--line) !important; border-radius: 16px; padding: 1.3rem; backdrop-filter: blur(12px); }
-div[data-baseweb="select"] > div, div[data-baseweb="input"] > div { background: rgba(11, 9, 23, 0.6) !important; border-color: var(--line) !important; border-radius: 10px !important; transition: border-color 0.25s var(--ease); }
+div[data-baseweb="select"] > div, div[data-baseweb="input"] > div { background: rgba(13, 27, 42, 0.6) !important; border-color: var(--line) !important; border-radius: 10px !important; transition: border-color 0.25s var(--ease); }
 div[data-baseweb="select"] > div:hover { border-color: var(--line-strong) !important; }
-span[data-baseweb="tag"] { background: rgba(167, 139, 250, 0.18) !important; color: var(--text) !important; border-radius: 8px !important; }
-div[data-testid="stSlider"] div[role="slider"] { box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.2) !important; }
+span[data-baseweb="tag"] { background: rgba(119, 141, 122, 0.35) !important; color: var(--text) !important; border-radius: 8px !important; }
+div[data-testid="stSlider"] div[role="slider"] { box-shadow: 0 0 0 4px rgba(212, 196, 168, 0.25) !important; }
 .stButton > button, div[data-testid="stFormSubmitButton"] > button {
-  width: 100%; background: var(--grad) !important; background-size: 200% auto !important; color: #140F26 !important;
+  width: 100%; background: var(--grad) !important; background-size: 200% auto !important; color: var(--navy) !important;
   font-weight: 700 !important; border: none !important; border-radius: 12px !important; padding: 0.6rem 1rem !important;
   transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), background-position 0.6s var(--ease) !important;
 }
 .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover {
-  transform: translateY(-2px); background-position: right center !important; box-shadow: 0 10px 28px -10px rgba(251, 113, 133, 0.7);
+  transform: translateY(-2px); background-position: right center !important; box-shadow: 0 10px 28px -10px rgba(212, 196, 168, 0.55);
 }
 div[data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 label, .stRadio label p, div[data-testid="stWidgetLabel"] p { color: var(--muted) !important; font-weight: 500 !important; }
